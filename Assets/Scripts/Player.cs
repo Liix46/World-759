@@ -11,6 +11,7 @@ public class Player : MonoBehaviour
     private Vector3 _ccMove;
 
     private CharacterController _characterController;
+    private Animator _animator;
     private float _camStartAngleY;
     private float _characterSpeed;
 
@@ -19,8 +20,8 @@ public class Player : MonoBehaviour
         _camAngels = Vector3.zero;
         _characterController = GetComponent<CharacterController>();
         _rod = _characterController.transform.position - cam.transform.position;
-        _camStartAngleY = cam.transform.root.eulerAngles.y;
-
+        _camStartAngleY = cam.transform.rotation.eulerAngles.y;
+        _animator = GetComponentInChildren<Animator>();
         _characterSpeed = 3;
     }
 
@@ -28,21 +29,30 @@ public class Player : MonoBehaviour
     void Update()
     {
 
-        //float dH = Input.GetAxis("Mouse X") * CAM_H_FACTOR;
-        //float dV = Input.GetAxis("Mouse Y") * CAM_V_FACTOR;
-        //cam.transform.Rotate(-dV, dH, 0);
-
         _camAngels.y += Input.GetAxis("Mouse X") * CAM_H_FACTOR;
         _camAngels.x -= Input.GetAxis("Mouse Y") * CAM_V_FACTOR;
-        cam.transform.eulerAngles = _camAngels;
+        
 
         cam.transform.position = _characterController.transform.position -
             (Quaternion.EulerAngles(0, _camAngels.y - _camStartAngleY, 0) * _rod);
+
+        cam.transform.eulerAngles = _camAngels * 180 / Mathf.PI;
+        transform.eulerAngles = _camAngels * 180 / Mathf.PI;
 
         // Character move
         _ccMove = (cam.transform.right * Input.GetAxis("Horizontal"))
             + (cam.transform.forward * Input.GetAxis("Vertical"));
         _ = _characterController.SimpleMove(_ccMove * _characterSpeed);
+
+
+        if (_characterController.velocity.magnitude > 0.1f)
+        {
+            _animator.SetInteger("PlayerState", 1);
+        }
+        else
+        {
+            _animator.SetInteger("PlayerState", 0);
+        }
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
