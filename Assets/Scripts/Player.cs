@@ -1,10 +1,13 @@
+using System;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class Player : MonoBehaviour
 {
     public const int CAM_H_FACTOR = 4;
     public const int CAM_V_FACTOR = 2;
     public Camera cam;
+    public GameObject coinPrefab;
 
     private Vector3 _rod;
     private Vector3 _camAngels;
@@ -15,6 +18,12 @@ public class Player : MonoBehaviour
     private float _camStartAngleY;
     private float _characterSpeed;
 
+    private GameObject toDestroy;
+    private float timeout;
+
+    private GameObject _coin;
+    private GameObject _player;
+
     void Start()
     {
         _camAngels = Vector3.zero;
@@ -23,6 +32,12 @@ public class Player : MonoBehaviour
         _rod = _characterController.transform.position - cam.transform.position;
         _camStartAngleY = cam.transform.rotation.eulerAngles.y;
         _characterSpeed = 3;
+        toDestroy = null;
+
+        _player = GameObject.Find("Player");
+        _coin = GameObject.FindGameObjectWithTag("Coin");
+
+        DistanceToCoin(_player.transform.position, _coin.transform.position);
     }
 
     [System.Obsolete]
@@ -56,10 +71,6 @@ public class Player : MonoBehaviour
             + (cam.transform.forward * mV);
         _ = _characterController.SimpleMove(_ccMove * _characterSpeed);
 
-
-        //Debug.Log("_ccMove: " + _ccMove);
-        //Debug.Log(_characterController.velocity.magnitude);
-        //Debug.Log("PlayerState: " + _animator.GetInteger("PlayerState"));
 
         foreach (AnimatorClipInfo clipInfo in _animator.GetCurrentAnimatorClipInfo(0))
         {
@@ -105,24 +116,29 @@ public class Player : MonoBehaviour
                 : 0;
             Debug.Log(Time.timeScale);
         }
+
+        DistanceToCoin(_player.transform.position, _coin.transform.position);
     }
+
+    private void LateUpdate()
+    {
+        if (toDestroy != null)
+        {
+            if (timeout <= 0)
+            {
+                GameObject.Destroy(toDestroy);
+                toDestroy = null;
+            }
+            else timeout -= Time.deltaTime;
+        }
+    }
+
+
 
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Coin"))
         {
-            //var posX = transform.position.x + Random.Range(-10, 10);
-            //var posZ = transform.position.z + Random.Range(-10, 10);
-            //do
-            //{
-            //    posX = transform.position.x + Random.Range(-10, 10);
-            //} while (posX > -5 && posX < 5);
-
-            //do
-            //{
-            //    posZ = transform.position.z + Random.Range(-10, 10);
-            //} while (posZ > -5 && posZ < 5);
-
             Vector3 posX;
             Vector3 posZ;
 
@@ -133,23 +149,23 @@ public class Player : MonoBehaviour
             } while ((posX - posZ).magnitude < 5f);
             
 
+            if (toDestroy == null)
+            {
+                other.gameObject.GetComponent<Animator>().SetBool("Disaper", true);
 
-            Debug.Log($"x {posX}\t y {posZ}\t magnitude {(posX - posZ).magnitude}");
-            //Instantiate(
-            //    original: other.gameObject,
-            //    position: ((Vector3.left * Random.Range(5, 10)) - (Vector3.forward * Random.Range(5, 10))).magnitude
-            //    + other.gameObject.transform.position,
-            //    rotation: Quaternion.identity);
+                GameObject coin = Instantiate(
+                    original: coinPrefab,
+                    position: posX - posZ + other.gameObject.transform.position,
+                    rotation: Quaternion.identity);
 
-            Instantiate(
-              original: other.gameObject,
-              position: posX - posZ + other.gameObject.transform.position,
-              rotation: Quaternion.identity);
+                toDestroy = other.transform.parent.gameObject;
+                timeout = 1.5f;
 
-            Debug.Log("pos" + (posX - posZ + other.gameObject.transform.position));
-            //Destroy(other.gameObject);
-            //posX + posZ + other.gameObject.transform.position.x +,
+                _coin = coin;
+                DistanceToCoin(_player.transform.position, _coin.transform.position);
+            }
 
+            Menu.Count++;
         }
     }
 
@@ -170,4 +186,13 @@ public class Player : MonoBehaviour
             //Debug.Log("MAX PASIVE");
         }
     }
+
+    private void DistanceToCoin(Vector3 positionPlayer, Vector3 postionCoin)
+    {
+        Menu.Distance = Math.Sqrt(
+            Math.Pow(positionPlayer.x - postionCoin.x, 2)
+            + Math.Pow(positionPlayer.z - postionCoin.z, 2)
+            );
+    }
+
 }
