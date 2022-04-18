@@ -6,6 +6,9 @@ public class Player : MonoBehaviour
 {
     public const int CAM_H_FACTOR = 4;
     public const int CAM_V_FACTOR = 2;
+
+    private float COIN_SPAWN_OFFSET_Y = 1.5f;
+
     public Camera cam;
     public GameObject coinPrefab;
 
@@ -35,28 +38,43 @@ public class Player : MonoBehaviour
         toDestroy = null;
 
         _player = GameObject.Find("Player");
+        //first coin
         _coin = GameObject.FindGameObjectWithTag("Coin");
+
+        if (_coin != null)
+        {
+            //Terrain height @ coin position
+
+            float terrainHeight = Terrain.activeTerrain.SampleHeight(_coin.transform.position);
+
+            // Coin height Offset : position height - Terrarian height @ coin position
+
+            COIN_SPAWN_OFFSET_Y = _coin.transform.position.y - terrainHeight;
+        }
+        else
+        {
+            COIN_SPAWN_OFFSET_Y = 1.5f;
+        }
 
         DistanceToCoin(_player.transform.position, _coin.transform.position);
     }
 
-    [System.Obsolete]
+    [Obsolete]
     void Update()
     {
-       // _animator.Update(0f);
-
         _camAngels.y += Input.GetAxis("Mouse X") * CAM_H_FACTOR;
-        _camAngels.x -= Input.GetAxis("Mouse Y") * CAM_V_FACTOR;
-        
+
+        //Debug.Log(_camAngels.x);
+        float my = Input.GetAxis("Mouse Y") * CAM_V_FACTOR;
+        if (_camAngels.x - my < 1 && _camAngels.x  - my > -1)
+        {
+            _camAngels.x -= my;
+        }
+
+        cam.transform.eulerAngles = _camAngels * 180 / Mathf.PI;
 
         cam.transform.position = _characterController.transform.position -
             (Quaternion.EulerAngles(0, _camAngels.y - _camStartAngleY, 0) * _rod);
-
-        //cam.transform.eulerAngles = _camAngels;
-        //transform.eulerAngles = _camAngels;
-
-        cam.transform.eulerAngles = _camAngels * 180 / Mathf.PI;
-        //transform.eulerAngles = _camAngels * 180 / Mathf.PI;
 
         Vector3 playerAngles = Vector3.zero;
         playerAngles.y = (_camAngels * 180 / Mathf.PI).z;
@@ -72,18 +90,18 @@ public class Player : MonoBehaviour
         _ = _characterController.SimpleMove(_ccMove * _characterSpeed);
 
 
-        foreach (AnimatorClipInfo clipInfo in _animator.GetCurrentAnimatorClipInfo(0))
-        {
-            Debug.Log(
-           "name: "
-           + clipInfo.clip.name
-           + "\tnormalizedTime: "
-           + _animator.GetCurrentAnimatorStateInfo(0).normalizedTime
-           + "\tlength: "
-           + _animator.GetCurrentAnimatorStateInfo(0).length
-           + "\tPlayerState: "
-           + _animator.GetInteger("PlayerState"));
-        }
+        //foreach (AnimatorClipInfo clipInfo in _animator.GetCurrentAnimatorClipInfo(0))
+        //{
+        //    Debug.Log(
+        //   "name: "
+        //   + clipInfo.clip.name
+        //   + "\tnormalizedTime: "
+        //   + _animator.GetCurrentAnimatorStateInfo(0).normalizedTime
+        //   + "\tlength: "
+        //   + _animator.GetCurrentAnimatorStateInfo(0).length
+        //   + "\tPlayerState: "
+        //   + _animator.GetInteger("PlayerState"));
+        //}
         
 
         if (_characterController.velocity.magnitude > 0.4f)
@@ -131,6 +149,31 @@ public class Player : MonoBehaviour
             }
             else timeout -= Time.deltaTime;
         }
+
+        if (Input.GetKeyDown(KeyCode.H))
+        {
+            Debug.Log(
+                Terrain.activeTerrain.SampleHeight(this.transform.position)
+                + " "
+                + Terrain.activeTerrain.terrainData.GetHeight(
+                    (int) this.transform.position.x,
+                    (int)this.transform.position.y)
+                );
+        }
+
+        Vector3 targetPos = _coin.transform.position;
+
+        //targetPos.y = cam.transform.position.y;
+        //targetPos.z = cam.transform.position.z;
+
+        Vector3 targetDir = targetPos - cam.transform.position;
+        Vector3 forward = cam.transform.forward;
+
+        float angleBetween = Vector3.SignedAngle(targetDir, forward, Vector3.up);
+
+        print(angleBetween);
+
+        Menu.AngleWatch = angleBetween;
     }
 
 
@@ -139,27 +182,30 @@ public class Player : MonoBehaviour
     {
         if (other.CompareTag("Coin"))
         {
-            Vector3 posX;
-            Vector3 posZ;
-
-            do
-            {
-                posX = Vector3.left * Random.Range(-10, 10);
-                posZ = Vector3.forward * Random.Range(-10, 10);
-            } while ((posX - posZ).magnitude < 5f);
-            
-
             if (toDestroy == null)
             {
                 other.gameObject.GetComponent<Animator>().SetBool("Disaper", true);
 
+                Vector3 spawnPosition = Vector3.zero;
+
+                do
+                {
+                    spawnPosition.Set(
+                        transform.position.x + Random.Range(-10, 10),
+                        transform.position.y,
+                        transform.position.z + Random.Range(-10, 10)
+                        );
+                } while ((spawnPosition - transform.position).magnitude < 5f);
+
+                spawnPosition.y = COIN_SPAWN_OFFSET_Y + Terrain.activeTerrain.SampleHeight(spawnPosition);
+
                 GameObject coin = Instantiate(
                     original: coinPrefab,
-                    position: posX - posZ + other.gameObject.transform.position,
+                    position: spawnPosition,
                     rotation: Quaternion.identity);
 
                 toDestroy = other.transform.parent.gameObject;
-                timeout = 1.5f;
+                timeout = 1.5f; // time animation coin
 
                 _coin = coin;
                 DistanceToCoin(_player.transform.position, _coin.transform.position);

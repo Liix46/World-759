@@ -7,6 +7,7 @@ public class Menu : MonoBehaviour
 {
     private static TMP_Text _textMoney;
     private static TMP_Text _textDistance;
+    private static TMP_Text _textWatch;
     
     private static int _count = 0;
     public static int Count
@@ -29,6 +30,17 @@ public class Menu : MonoBehaviour
         }
     }
 
+    private static float _angleWatch = 0f;
+    public static float AngleWatch
+    {
+        get { return _angleWatch; }
+        set
+        {
+            _angleWatch = (float)System.Math.Ceiling(value);
+            UpdateTextWatch();
+        }
+    }
+
     private Canvas _menu;
 
     [System.Obsolete]
@@ -37,6 +49,7 @@ public class Menu : MonoBehaviour
         _menu = GameObject.Find("Settings").GetComponentInChildren<Canvas>();
         _textMoney = GameObject.Find("Money Text").GetComponent<TMP_Text>();
         _textDistance = GameObject.Find("Distance Text").GetComponent<TMP_Text>();
+        _textWatch = GameObject.Find("Watch Text").GetComponent<TMP_Text>();
 
         Count = 0;
         //Distance = 0d;
@@ -54,12 +67,31 @@ public class Menu : MonoBehaviour
         _textMoney.text = $"MONEY: {Count}";
     }
 
-    static void UpdateTextDistance()
+    private static void UpdateTextDistance()
     {
         if (_textDistance != null)
         {
             _textDistance.text = $"DISTANCE: {Distance}";
         }
-        
+    }
+
+    private static void UpdateTextWatch()
+    {
+        if (_textWatch != null)
+        {
+            if (_angleWatch < 0)
+            {
+               
+                _textWatch.text = $"WATCH:    {_angleWatch} >>";
+            }
+            else if (_angleWatch > 0)
+            {
+                _textWatch.text = $"WATCH: << {_angleWatch}";
+            }
+            else
+            {
+                _textWatch.text = $"WATCH:    {_angleWatch}";
+            }
+        }
     }
 }
