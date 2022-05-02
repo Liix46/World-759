@@ -13,6 +13,7 @@ public class Player : MonoBehaviour
     public GameObject coinPrefab;
 
     private Vector3 _rod;
+    private float rodScale;
     private Vector3 _camAngels;
     private Vector3 _ccMove;
 
@@ -27,12 +28,20 @@ public class Player : MonoBehaviour
     private GameObject _coin;
     private GameObject _player;
 
+    private GameObject pivot;
+
+  
+
     void Start()
     {
         _camAngels = Vector3.zero;
         _characterController = GetComponent<CharacterController>();
         _animator = GetComponent<Animator>();
-        _rod = _characterController.transform.position - cam.transform.position;
+
+        pivot = GameObject.Find("CamPivot");
+        _rod = pivot.transform.position - cam.transform.position;
+        rodScale = 1;
+
         _camStartAngleY = cam.transform.rotation.eulerAngles.y;
         _characterSpeed = 3;
         toDestroy = null;
@@ -57,6 +66,7 @@ public class Player : MonoBehaviour
         }
 
         DistanceToCoin(_player.transform.position, _coin.transform.position);
+
     }
 
     [Obsolete]
@@ -73,8 +83,8 @@ public class Player : MonoBehaviour
 
         cam.transform.eulerAngles = _camAngels * 180 / Mathf.PI;
 
-        cam.transform.position = _characterController.transform.position -
-            (Quaternion.EulerAngles(0, _camAngels.y - _camStartAngleY, 0) * _rod);
+        cam.transform.position = pivot.transform.position -
+            (Quaternion.EulerAngles(0, _camAngels.y - _camStartAngleY, 0) * _rod * rodScale);
 
         Vector3 playerAngles = Vector3.zero;
         playerAngles.y = (_camAngels * 180 / Mathf.PI).z;
@@ -88,22 +98,7 @@ public class Player : MonoBehaviour
         _ccMove = (cam.transform.right * mH)
             + (cam.transform.forward * mV);
         _ = _characterController.SimpleMove(_ccMove * _characterSpeed);
-
-
-        //foreach (AnimatorClipInfo clipInfo in _animator.GetCurrentAnimatorClipInfo(0))
-        //{
-        //    Debug.Log(
-        //   "name: "
-        //   + clipInfo.clip.name
-        //   + "\tnormalizedTime: "
-        //   + _animator.GetCurrentAnimatorStateInfo(0).normalizedTime
-        //   + "\tlength: "
-        //   + _animator.GetCurrentAnimatorStateInfo(0).length
-        //   + "\tPlayerState: "
-        //   + _animator.GetInteger("PlayerState"));
-        //}
         
-
         if (_characterController.velocity.magnitude > 0.4f)
         {
             if (mV == 0f)
@@ -138,6 +133,7 @@ public class Player : MonoBehaviour
         DistanceToCoin(_player.transform.position, _coin.transform.position);
     }
 
+    [Obsolete]
     private void LateUpdate()
     {
         if (toDestroy != null)
@@ -161,19 +157,49 @@ public class Player : MonoBehaviour
                 );
         }
 
-        Vector3 targetPos = _coin.transform.position;
+        Menu.AngleWatch = CamCoinAngle();
 
-        //targetPos.y = cam.transform.position.y;
-        //targetPos.z = cam.transform.position.z;
+        Vector2 msd = Input.mouseScrollDelta;
+        if (msd.magnitude > 0)
+        {
+            // print(msd);
+          
+            if (msd.y > 0)
+            {
+                //_rod -= _rod.normalized / 0.1f;
+                if (rodScale > 0.3f)
+                {
+                    if (rodScale > 1.0f)
+                        rodScale -= 0.2f;
+                    else
+                        rodScale -= 0.1f;
+                    print("A  " + rodScale);
+                }
+               // print("A  " + cam.transform.position.y);
+            }
+            if (msd.y < 0)
+            {
+                if (rodScale < 2.0f)
+                {
+                    if (rodScale > 1.0f && rodScale < 1.9f)
+                        rodScale += 0.2f;
+                    else
+                        rodScale += 0.1f;
+                    
+                    print("B  " + rodScale);
+                }
+                //print("B  " + cam.transform.position.y);
+            }
+           
+        }
+        if (Input.GetMouseButtonDown(1))
+        {
+            // Debug.Log("Pressed secondary button.");
+            rodScale = 1;
+        }
+            
 
-        Vector3 targetDir = targetPos - cam.transform.position;
-        Vector3 forward = cam.transform.forward;
-
-        float angleBetween = Vector3.SignedAngle(targetDir, forward, Vector3.up);
-
-        print(angleBetween);
-
-        Menu.AngleWatch = angleBetween;
+        
     }
 
 
@@ -229,7 +255,6 @@ public class Player : MonoBehaviour
         else
         {
             _animator.SetInteger("PlayerState", backPlayerStat);
-            //Debug.Log("MAX PASIVE");
         }
     }
 
@@ -241,4 +266,30 @@ public class Player : MonoBehaviour
             );
     }
 
+
+    /*
+     * Angle Between Camera.forward and direction to coin
+     */
+    private float CamCoinAngle()
+    {
+        //transform.position - player position
+        //_coin.transform.position - coin position
+        //cam.transform.position - camera "sight" direction
+        //float angle = Acos(v1,v2) / |v1||v2| )
+        //v3 = [v1  x  v2] - up(+) down(-) 
+        Vector3 v1 = cam.transform.forward;
+        v1.y = 0;
+        Vector3 v2 = _coin.transform.position - transform.position;
+        v2.y = 0;
+
+        float angle = Mathf.Acos(Vector3.Dot(v1,v2) / v1.magnitude / v2.magnitude);
+        Vector3 v3 = Vector3.Cross(v1, v2);
+
+        if (v3.y > 0)
+        {
+            angle = -angle;
+        }
+
+        return angle * 180 / Mathf.PI;
+    }
 }
