@@ -72,64 +72,15 @@ public class Player : MonoBehaviour
     [Obsolete]
     void Update()
     {
-        _camAngels.y += Input.GetAxis("Mouse X") * CAM_H_FACTOR;
-
-        //Debug.Log(_camAngels.x);
-        float my = Input.GetAxis("Mouse Y") * CAM_V_FACTOR;
-        if (_camAngels.x - my < 1 && _camAngels.x  - my > -1)
+        if (Time.timeScale == 0)
         {
-            _camAngels.x -= my;
+            return;
         }
-
-        cam.transform.eulerAngles = _camAngels * 180 / Mathf.PI;
-
-        cam.transform.position = pivot.transform.position -
-            (Quaternion.EulerAngles(0, _camAngels.y - _camStartAngleY, 0) * _rod * rodScale);
-
-        Vector3 playerAngles = Vector3.zero;
-        playerAngles.y = (_camAngels * 180 / Mathf.PI).z;
-        transform.eulerAngles = playerAngles;
-
-
-        // Character move
-        float mH = Input.GetAxis("Horizontal");
-        float mV = Input.GetAxis("Vertical");
-
-        _ccMove = (cam.transform.right * mH)
-            + (cam.transform.forward * mV);
-        _ = _characterController.SimpleMove(_ccMove * _characterSpeed);
-        
-        if (_characterController.velocity.magnitude > 0.4f)
-        {
-            if (mV == 0f)
-            {
-                _animator.SetInteger("PlayerState", 2);
-
-                if (_animator.GetCurrentAnimatorStateInfo(0).length < _animator.GetCurrentAnimatorStateInfo(0).normalizedTime
-                    && _animator.GetCurrentAnimatorStateInfo(0).IsName("LeftTurn"))
-                {
-                    _animator.SetInteger("PlayerState", 3);
-                }
-            }
-            else
-            {
-                Jump(4, 1);
-            }
-        }
-        else
-        {
-            Jump(4, 0);
-        }
-
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            Time.timeScale =
-                Time.timeScale == 0
-                ? 1
-                : 0;
-            Debug.Log(Time.timeScale);
-        }
-
+        // Move Camera to Player
+        MoveCamToPlayer();
+        // Move Player
+        MovePlayer();
+        // measures the player's distance from the coin
         DistanceToCoin(_player.transform.position, _coin.transform.position);
     }
 
@@ -291,5 +242,59 @@ public class Player : MonoBehaviour
         }
 
         return angle * 180 / Mathf.PI;
+    }
+
+    [Obsolete]
+    private void MoveCamToPlayer()
+    {
+        _camAngels.y += Input.GetAxis("Mouse X") * CAM_H_FACTOR;
+        float my = Input.GetAxis("Mouse Y") * CAM_V_FACTOR;
+
+        if (_camAngels.x - my < 1 && _camAngels.x - my > -1)
+        {
+            _camAngels.x -= my;
+        }
+
+        cam.transform.eulerAngles = _camAngels * 180 / Mathf.PI;
+
+        cam.transform.position = pivot.transform.position -
+            (Quaternion.EulerAngles(0, _camAngels.y - _camStartAngleY, 0) * _rod * rodScale);
+
+        Vector3 playerAngles = Vector3.zero;
+        playerAngles.y = (_camAngels * 180 / Mathf.PI).z;
+        transform.eulerAngles = playerAngles;
+    }
+
+    private void MovePlayer()
+    {
+        // Character move
+        float mH = Input.GetAxis("Horizontal");
+        float mV = Input.GetAxis("Vertical");
+
+        _ccMove = (cam.transform.right * mH)
+            + (cam.transform.forward * mV);
+        _ = _characterController.SimpleMove(_ccMove * _characterSpeed);
+
+        if (_characterController.velocity.magnitude > 0.4f)
+        {
+            if (mV == 0f)
+            {
+                _animator.SetInteger("PlayerState", 2);
+
+                if (_animator.GetCurrentAnimatorStateInfo(0).length < _animator.GetCurrentAnimatorStateInfo(0).normalizedTime
+                    && _animator.GetCurrentAnimatorStateInfo(0).IsName("LeftTurn"))
+                {
+                    _animator.SetInteger("PlayerState", 3);
+                }
+            }
+            else
+            {
+                Jump(4, 1);
+            }
+        }
+        else
+        {
+            Jump(4, 0);
+        }
     }
 }
